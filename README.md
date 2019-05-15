@@ -20,7 +20,8 @@ import (
 url      := "https://registry-1.docker.io/"
 username := "" // anonymous
 password := "" // anonymous
-hub, err := registry.New(url, username, password)
+timeout := time.Duration(2) * time.Second
+hub, err := registry.New(url, username, password, timeout, log)
 ```
 
 Creating a registry will also ping it to verify that it supports the registry

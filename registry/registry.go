@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type LogfCallback func(format string, args ...interface{})
@@ -38,24 +39,24 @@ type Registry struct {
  * This passes http.DefaultTransport to WrapTransport when creating the
  * http.Client.
  */
-func New(registryUrl, username, password string) (*Registry, error) {
+func New(registryUrl, username, password string, timeout time.Duration, log LogfCallback) (*Registry, error) {
 	transport := http.DefaultTransport
 
-	return newFromTransport(registryUrl, username, password, transport, Log)
+	return newFromTransport(registryUrl, username, password, transport, timeout, log)
 }
 
 /*
  * Create a new Registry, as with New, using an http.Transport that disables
  * SSL certificate verification.
  */
-func NewInsecure(registryUrl, username, password string) (*Registry, error) {
+func NewInsecure(registryUrl, username, password string, timeout time.Duration, log LogfCallback) (*Registry, error) {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
 	}
 
-	return newFromTransport(registryUrl, username, password, transport, Log)
+	return newFromTransport(registryUrl, username, password, transport, timeout, log)
 }
 
 /*
@@ -82,13 +83,14 @@ func WrapTransport(transport http.RoundTripper, url, username, password string) 
 	return errorTransport
 }
 
-func newFromTransport(registryUrl, username, password string, transport http.RoundTripper, logf LogfCallback) (*Registry, error) {
+func newFromTransport(registryUrl, username, password string, transport http.RoundTripper, timeout time.Duration, logf LogfCallback) (*Registry, error) {
 	url := strings.TrimSuffix(registryUrl, "/")
 	transport = WrapTransport(transport, url, username, password)
 	registry := &Registry{
 		URL: url,
 		Client: &http.Client{
 			Transport: transport,
+			Timeout:   timeout,
 		},
 		Logf: logf,
 	}
@@ -108,13 +110,10 @@ func (r *Registry) url(pathTemplate string, args ...interface{}) string {
 
 func (r *Registry) Ping() error {
 	url := r.url("/v2/")
-	r.Logf("registry.ping url=%s", url)
+	//r.Logf("registry.ping url=%s", url)
 	resp, err := r.Client.Get(url)
 	if resp != nil {
 		defer resp.Body.Close()
-	}
-	if err != nil {
-
 	}
 	return err
 }
